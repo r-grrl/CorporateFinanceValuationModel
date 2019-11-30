@@ -1,0 +1,206 @@
+---
+title: "ExxonMobil Valuation Model and Sensitivity Analysis"
+author: "Syndicate Group 5"
+date: "21/11/2019"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+### References ###
+ExxonMobil Financial Data has been obtained from ExxonMobil's website
+
+All $ values and Balance sheet figures are presented in millions. Date used for market value is company financial year end 31st December 2018
+### ExxonMobil constants ###
+#### Operating Margin (EBIT%) ####
+Taking figures from 2018 ExxonMobil Accounts
+Revenue = 290,212
+Expenditure before Interest and Tax = 260,025
+Margin is therefore:
+`r (290212-260025)/290212`
+#### Cost of Capital ####
+ExxonMobil WACC is between 8 and 12%. will use a midpoint of 10% for initial analysis, based on the FASB standardised FCFF calculation.
+#### Reinvestment Rate ####
+ExxonMobil had operating profit of 290,212, and had Capex and R&D costs of 25,923 and 1,116 respectively. This gives a reinvestment rate of 27,039/290,212 = 0.0931, assuming reinvestment grows in line with revenue.
+#### Tax Rate ####
+ExxonMobil has a tax reconcilliation in their published accounts, which lists the effective tax rate as 37%
+
+```{r setup, include=FALSE}
+source("CorporateFinanceExxonMobil.R")
+set.seed(36912)
+library(ggplot2)
+library(bbplot)
+###Modelconstants is a vector with Operating Margin, tax rate, reinvestment rate and cost of capital are inputs into our model
+Modelconstants <- c(0.1040, 0.37, 0.0931, 0.1)
+###balancesheet is a vector with the balance sheet figures debt, minority interests, cash and non-operating assets
+balancesheet <- c(-37796, -6734, 3042, 51122)
+```
+
+## Mid point estimate
+This valuation will assume a 10 year horizon, a 2.4% Oil price growth rate year on year and a 1.0% oil demand increase. Cost of Capital, tax rate and reinvestment rate is assumed to be constant. 
+2.4% approximates the oil price growth projections of Canada Energy Board 
+https://apps.cer-rec.gc.ca/ftrppndc/dflt.aspx?GoCTemplateCulture=en-CA 
+1.0% demand growth is taken as reasonable based on this McKinsey report on oil.
+https://www.mckinsey.com/solutions/energy-insights/global-oil-supply-demand-outlook-to-2035/~/media/231FB01E4937431B8BA070CC55AA572E.ashx
+```{r}
+#57.88 is the realised revenue per barrel from 2018 financial statements
+oil_prices <- linear_growth_function(57.88, 0.024, 11)
+#827m is the number of barrels sold in December 2018
+barrels_sold <- linear_growth_function(827, 0.01, 11)
+#projected revenue growth of chemical
+chemical_revenue_growth <- linear_growth_function(32443, 0.034, 11)
+#projected revenue growth of downstream
+downstream_revenue_growth <- linear_growth_function(221334, 0.034, 11)
+
+share_price_mid <- wrapped_share_price(oil_prices, barrels_sold, chemical_revenue_growth,
+                                       downstream_revenue_growth, Modelconstants, balancesheet, 11, 4237)
+
+share_price_mid_table <- PV_forecast_table(oil_prices, barrels_sold, chemical_revenue_growth, downstream_revenue_growth, 11, Modelconstants)
+
+print(share_price_mid_table)
+print(share_price_mid)
+
+```
+#### Current ExxonMobil Share Price
+The ExxonMobil share price as at 31st December 2018 close is 
+$68.19
+https://ir.exxonmobil.com/historical-price-lookup?8c7bdd83-a726-4a84-b969-494be2477e47%5BXOM%5D%5Bdate_month%5D=12&8c7bdd83-a726-4a84-b969-494be2477e47%5BXOM%5D%5Bdate_day%5D=31&8c7bdd83-a726-4a84-b969-494be2477e47%5BXOM%5D%5Bdate_year%5D=2018&url= 
+## High growth rate
+This estimate uses the same linear growth rate of 2.4% for oil price, but uses a 5% rate for demand growth. 
+```{r}
+oil_prices <- linear_growth_function(57.88, 0.024, 11)
+barrels_sold <- linear_growth_function(826, 0.05, 11)
+
+share_price_high <- wrapped_share_price(oil_prices, barrels_sold, chemical_revenue_growth, downstream_revenue_growth, Modelconstants, balancesheet, 11, 4237)
+
+print(share_price_high)
+```
+## Low Growth Rate
+This uses a growth rate for oil prices of 0.5%, and a demand growth rate of 1%
+```{r}
+oil_prices <- linear_growth_function(57.88, 0.005, 11)
+barrels_sold <- linear_growth_function(826, 0.01, 11)
+
+share_price_low <- wrapped_share_price(oil_prices, barrels_sold, chemical_revenue_growth, downstream_revenue_growth, Modelconstants, balancesheet, 11, 4237)
+
+print(share_price_low)
+
+```
+
+## Negative Growth
+This uses a negative growth rate for oil prices of -1%, and a negative growth rate for demand of -1%
+```{r}
+oil_prices <- linear_growth_function(57.88, -0.01, 11)
+barrels_sold <- linear_growth_function(826, -0.01, 11)
+
+share_price_lowest <- wrapped_share_price(oil_prices, barrels_sold, chemical_revenue_growth, downstream_revenue_growth, Modelconstants, balancesheet, 11, 4237)
+
+print(share_price_lowest)
+
+```
+
+## Varying commodity price
+```{r}
+oil_prices_growth_rates <- seq(-3, 5, 0.1)
+oil_prices_growth_rates <- oil_prices_growth_rates/100
+
+price_outcomes_oil <- rep(0, length(oil_prices_growth_rates))
+###Modelconstants is a vector with Operating Margin, tax rate, reinvestment rate and cost of capital are inputs into our model
+Modelconstants <- c(0.1040, 0.37, 0.0931, 0.1)
+
+for (i in oil_prices_growth_rates){
+  oil_prices_o <- linear_growth_function(57.88, i, 11)
+  barrels_sold_o <- linear_growth_function(826, 0.01, 11)
+  share_price_outcome_year <- wrapped_share_price(oil_prices_o, barrels_sold_o, chemical_revenue_growth, downstream_revenue_growth, Modelconstants, balancesheet, 11, 4237)
+  price_outcomes_oil[which(oil_prices_growth_rates == i)] <- share_price_outcome_year
+}
+
+oil_price_sensitivity <- data.frame(oil_prices_growth_rates, price_outcomes_oil)
+
+
+oil_price_sensitivity_plot <- ggplot(oil_price_sensitivity, 
+                                     aes( x = oil_prices_growth_rates,
+                                          y = price_outcomes_oil)) +
+  geom_line(colour = "#1380A1", size = 1)+
+                          geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  geom_vline(xintercept = 0, size = 1, colour = '#333333') +
+  geom_hline(yintercept = 68.13,
+  colour = "red", size = 0.5) + 
+  theme_light() +
+  labs(title="Oil Price growth rate impact on Share Price")
+
+print(oil_price_sensitivity_plot)
+```
+
+
+## Varying the constants - cost of capital
+This looks at the impact of the cost of Capital on the valuation of the company, using the mid point growth rates for oil price and demand.
+```{r echo=FALSE}
+oil_prices <- linear_growth_function(57.88, 0.024, 11)
+barrels_sold <- linear_growth_function(826, 0.01, 11)
+
+cost_of_capital_rates <- seq(7, 12, 0.5)
+cost_of_capital_rates <- cost_of_capital_rates/100
+
+price_outcomes <- rep(0, length(cost_of_capital_rates))
+
+for (i in seq_len(length(cost_of_capital_rates))){
+  Modelconstants[4] <- cost_of_capital_rates[i]
+  share_price_outcome <- wrapped_share_price(oil_prices, barrels_sold, chemical_revenue_growth, downstream_revenue_growth, Modelconstants, balancesheet, 11, 4237)
+  price_outcomes[i] <- share_price_outcome
+}
+
+cost_of_capital_sensitivity <- data.frame(cost_of_capital_rates, price_outcomes)
+
+CoC_plot <- ggplot(cost_of_capital_sensitivity,
+        aes(x = cost_of_capital_rates, y = price_outcomes)) +
+        geom_line(colour = "#1380A1", size = 1) +
+        geom_hline(yintercept = 0, size = 1, colour="#333333") +
+        geom_hline(yintercept = 68.13,
+        colour = "red", size = 0.5) + 
+        theme_light() +
+        labs(title="Model Sensitivity to Cost of Capital")
+print(CoC_plot)
+
+finalise_plot(plot_name = CoC_plot,
+              source_name = "",
+              save_filepath = "CostofCapitalSensitivity.png",
+              width_pixels = 640,
+              height_pixels = 550)
+
+```
+
+## Varying the constants - Operating Margin
+This looks at the impact of Operating Margin on the valuation of ExxonMobil, using the mid point growth rates for oil price and demand.
+```{r}
+oil_prices <- linear_growth_function(57.88, 0.024, 11)
+barrels_sold <- linear_growth_function(826, 0.01, 11)
+
+operating_margin_rates <- seq(5, 20, 0.1)
+operating_margin_rates <- operating_margin_rates/100
+
+price_outcomes_margin <- rep(0, length(operating_margin_rates))
+
+for (i in seq_len(length(operating_margin_rates))){
+  Modelconstants[1] <- operating_margin_rates[i]
+  share_price_outcome <- wrapped_share_price(oil_prices, barrels_sold, chemical_revenue_growth, downstream_revenue_growth, Modelconstants, balancesheet, 11, 4237)
+  price_outcomes_margin[i] <- share_price_outcome
+}
+
+operating_margin_sensitivity <- data.frame(operating_margin_rates, price_outcomes_margin)
+
+op_margin_plot <- ggplot(operating_margin_sensitivity, 
+                         aes(x= operating_margin_rates,
+                             y= price_outcomes_margin)) +
+                          geom_line(colour = "#1380A1", size = 1)+
+                          geom_hline(yintercept = 68.13,
+                          colour = "red", size = 0.5) + 
+                          geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  theme_light() +
+  labs(title="Operating Margin Impact on Share Price") 
+
+print(op_margin_plot)
+
+```
+
