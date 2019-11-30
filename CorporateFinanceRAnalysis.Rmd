@@ -3,27 +3,27 @@ title: "ExxonMobil Valuation Model and Sensitivity Analysis"
 author: "Syndicate Group 5"
 date: "21/11/2019"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
   word_document: default
 ---
-### References ###
+### References
 ExxonMobil Financial Data has been obtained from ExxonMobil's website
 
 All $ values and Balance sheet figures are presented in millions. Date used for market value is company financial year end 31st December 2018
-### ExxonMobil constants ###
-#### Operating Margin (EBIT%) ####
+## ExxonMobil constants
+### Operating Margin (EBIT%) 
 Taking figures from 2018 ExxonMobil Accounts
 Revenue = 290,212
 Expenditure before Interest and Tax = 260,025
 Margin is therefore:
 `r (290212-260025)/290212`
-#### Cost of Capital ####
+### Cost of Capital 
 ExxonMobil WACC is between 8 and 12%. will use a midpoint of 10% for initial analysis, based on the FASB standardised FCFF calculation.
-#### Reinvestment Rate ####
+### Reinvestment Rate 
 ExxonMobil had operating profit of 290,212, and had Capex and R&D costs of 25,923 and 1,116 respectively. This gives a reinvestment rate of 27,039/290,212 = 0.0931, assuming reinvestment grows in line with revenue.
-#### Tax Rate ####
+### Tax Rate 
 ExxonMobil has a tax reconcilliation in their published accounts, which lists the effective tax rate as 37%
 
 ```{r setup, include=FALSE}
@@ -57,7 +57,7 @@ share_price_mid <- wrapped_share_price(oil_prices, barrels_sold, chemical_revenu
                                        downstream_revenue_growth, Modelconstants, balancesheet, 11, 4237)
 
 share_price_mid_table <- PV_forecast_table(oil_prices, barrels_sold, chemical_revenue_growth, downstream_revenue_growth, 11, Modelconstants)
-
+  
 print(share_price_mid_table)
 print(share_price_mid)
 
